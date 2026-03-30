@@ -1,0 +1,172 @@
+body {
+    background-color: #1e1e2f;
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px 0;
+    box-sizing: border-box;
+}
+
+.page-wrapper {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+}
+
+.game-container {
+    text-align: center;
+}
+
+.scoreboard {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+canvas {
+    background-color: #2a2a40;
+    border: 4px solid #4a4a6a;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    display: block;
+}
+
+.controls {
+    margin-top: 15px;
+    color: #aaa;
+}
+
+/* ── Leaderboard ──────────────────────────────────────────────────────────── */
+
+.leaderboard {
+    background: #2a2a40;
+    border: 2px solid #4a4a6a;
+    border-radius: 8px;
+    padding: 20px 24px;
+    min-width: 200px;
+    max-width: 240px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.leaderboard h2 {
+    margin: 0 0 12px;
+    font-size: 1.1rem;
+    text-align: center;
+    color: #ffd700;
+}
+
+.leaderboard ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.leaderboard li {
+    padding: 4px 0;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #3a3a5a;
+}
+
+.leaderboard li:last-child {
+    border-bottom: none;
+}
+
+.leaderboard .empty-msg {
+    list-style: none;
+    margin-left: -20px;
+    color: #aaa;
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+/* ── Game Over Modal ──────────────────────────────────────────────────────── */
+
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: #2a2a40;
+    border: 2px solid #4a4a6a;
+    border-radius: 12px;
+    padding: 32px 40px;
+    text-align: center;
+    min-width: 300px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.8);
+}
+
+.modal-content h2 {
+    margin: 0 0 10px;
+    font-size: 1.8rem;
+    color: #ff4757;
+}
+
+.modal-content p {
+    margin: 0 0 18px;
+    font-size: 1.1rem;
+    color: #ccc;
+}
+
+.submit-score {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.submit-score input {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #4a4a6a;
+    background: #1e1e2f;
+    color: #fff;
+    font-size: 0.95rem;
+}
+
+.submit-score input:focus {
+    outline: 2px solid #2ed573;
+}
+
+.submit-score button,
+#restart-btn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: bold;
+    transition: opacity 0.2s;
+}
+
+.submit-score button {
+    background: #2ed573;
+    color: #1e1e2f;
+}
+
+#restart-btn {
+    background: #4a4a6a;
+    color: #fff;
+    width: 100%;
+}
+
+.submit-score button:hover,
+#restart-btn:hover {
+    opacity: 0.85;
+}
+
