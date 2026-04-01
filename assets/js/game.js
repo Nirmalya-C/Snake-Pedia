@@ -48,7 +48,7 @@
        -------------------------------------------------------- */
     const COLORS = {
         board:      '#0d1117',
-        grid:       'rgba(255,255,255,0.025)',
+        grid:       'rgba(255, 255, 255, 0.08)',
         snakeHead:  '#34d399',
         snakeBody1: '#06b6d4',
         snakeBody2: '#34d399',
@@ -366,7 +366,7 @@
        -------------------------------------------------------- */
     function drawGrid() {
         ctx.strokeStyle = COLORS.grid;
-        ctx.lineWidth   = 0.5;
+        ctx.lineWidth   = 1.0;
         for (let c = 1; c < COLS; c++) {
             ctx.beginPath();
             ctx.moveTo(c * GRID, 0);
@@ -386,14 +386,12 @@
        -------------------------------------------------------- */
     function drawFood() {
         if (!food) return;
-        foodPulse += 0.06;
-        foodBob   += 0.04;
 
-        const pulse = Math.sin(foodPulse) * 0.12 + 0.88;
-        const bob   = Math.sin(foodBob) * 1.5;
         const cx    = food.x * GRID + GRID / 2;
-        const cy    = food.y * GRID + GRID / 2 + bob;
-        const radius = (GRID / 2 - 2) * pulse;
+        const cy    = food.y * GRID + GRID / 2;
+        
+        // Exact same footprint as the snake head
+        const radius = (GRID - 1) / 2;
 
         // Glow
         const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, GRID * 1.6);
@@ -416,7 +414,7 @@
         ctx.fillStyle = COLORS.foodShine;
         ctx.globalAlpha = 0.5;
         ctx.beginPath();
-        ctx.ellipse(cx - radius * 0.25, cy - radius * 0.3, radius * 0.25, radius * 0.18, -0.5, 0, Math.PI * 2);
+        ctx.ellipse(cx - radius * 0.25, cy - radius * 0.3, radius * 0.4, radius * 0.25, -0.4, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
 
