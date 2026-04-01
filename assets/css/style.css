@@ -265,17 +265,35 @@ h1 .accent { color: var(--accent); }
 }
 
 /* ============================================================
-   Controls / Chips / Legend
+   Rules Box / Chips / Legend
    ============================================================ */
-.controls {
+.rules-box {
     margin-top: 16px;
-    padding: 14px;
+    padding: 18px;
     border-radius: 12px;
-    border: 1px dashed var(--border);
-    background: rgba(255, 255, 255, 0.015);
-    color: var(--muted);
-    font-size: 14px;
+    border: 1px solid var(--primary);
+    background: rgba(52, 211, 153, 0.06);
+    box-shadow: 0 0 20px rgba(52, 211, 153, 0.15);
+    color: var(--text);
+    font-size: 14.5px;
     line-height: 1.6;
+}
+
+.rules-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 8px;
+}
+
+.rules-box ul {
+    margin-left: 22px;
+    margin-bottom: 14px;
+    color: var(--muted);
+}
+
+.rules-box ul strong {
+    color: var(--danger);
 }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }

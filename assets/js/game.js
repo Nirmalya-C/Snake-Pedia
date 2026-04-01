@@ -10,7 +10,7 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx    = canvas.getContext('2d');
 
-    const CELL_COUNT    = 20;           // grid cells per axis
+    const CELL_COUNT    = 25;           // grid cells per axis (bigger playing area)
     const BASE_TICK     = 130;          // ms per step at 1.0× speed
     const SPEED_BUMP    = 0.1;          // speed multiplier increase per food
     const START_SPEED   = 0.2;          // base starting speed
@@ -27,7 +27,7 @@
         const padY   = parseFloat(style.paddingTop)  + parseFloat(style.paddingBottom);
         const maxW   = wrap.clientWidth  - padX;
         const maxH   = wrap.clientHeight - padY;
-        const avail  = Math.min(maxW, maxH, 600);
+        const avail  = Math.min(maxW, maxH, 800);  // max out at 800px instead of 600px
 
         const cellPx = Math.floor(avail / CELL_COUNT);
         canvasSize   = cellPx * CELL_COUNT;
