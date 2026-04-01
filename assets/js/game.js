@@ -12,7 +12,8 @@
 
     const CELL_COUNT    = 20;           // grid cells per axis
     const BASE_TICK     = 130;          // ms per step at 1.0× speed
-    const SPEED_BUMP    = 0.2;          // speed multiplier increase per food
+    const SPEED_BUMP    = 0.1;          // speed multiplier increase per food
+    const START_SPEED   = 0.2;          // base starting speed
     const MAX_SPEED     = 5.0;          // cap so the game is still playable
     const RESTART_DELAY = 2800;         // ms before auto-restart after death
 
@@ -72,6 +73,7 @@
     const $oBtn       = document.getElementById('overlay-btn');
     const $speedFill  = document.getElementById('speed-fill');
     const $speedValue = document.getElementById('speed-value');
+    const $pauseBtn   = document.getElementById('pause-btn');
 
     /* --------------------------------------------------------
        Persistent high score
@@ -94,13 +96,13 @@
     /* --------------------------------------------------------
        State
        -------------------------------------------------------- */
-    let phase       = 'idle';       // idle | playing | gameover
+    let phase       = 'idle';       // idle | playing | paused | gameover
     let lastTick    = 0;
     let rafId       = null;
     let foodPulse   = 0;
     let foodBob     = 0;
     let particles   = [];
-    let speedMul    = 1.0;          // current speed multiplier
+    let speedMul    = START_SPEED;  // current speed multiplier
     let restartTimer = null;
 
     const snake = {
@@ -124,7 +126,7 @@
         snake.next  = null;
         snake.score = 0;
         snake.alive = true;
-        speedMul    = 1.0;
+        speedMul    = START_SPEED;
         particles   = [];
         food        = null;
         spawnFood();
@@ -152,6 +154,55 @@
             if (++attempts > 2000) return;
         } while (taken.has(key(spot.x, spot.y)));
         food = spot;
+    }
+
+    /* --------------------------------------------------------
+       Audio System (Web Audio API for retro synth sounds)
+       -------------------------------------------------------- */
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new AudioContext();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playTone(freq, type, duration, vol = 0.1, slideFreq = null) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        if (slideFreq) {
+            osc.frequency.exponentialRampToValueAtTime(slideFreq, audioCtx.currentTime + duration);
+        }
+        
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playEatSound() {
+        // Quick high-pitched "blip"
+        playTone(600, 'square', 0.1, 0.05, 800);
+        setTimeout(() => playTone(800, 'square', 0.1, 0.05, 1200), 50);
+    }
+
+    function playDeathSound() {
+        // Low downward descending "boom"
+        playTone(200, 'sawtooth', 0.5, 0.2, 30);
+        // Noise equivalent by rapid frequency changes
+        setTimeout(() => playTone(150, 'square', 0.4, 0.15, 20), 100);
     }
 
     /* --------------------------------------------------------
@@ -249,6 +300,7 @@
 
         if (ate) {
             snake.score++;
+            playEatSound();
             emitEatSparkle(food.x, food.y);
             spawnFood();
             popScore($pScore);
@@ -263,6 +315,7 @@
         // Self-collision
         if (checkSelfCollision()) {
             snake.alive = false;
+            playDeathSound();
             emitParticles(newHead.x, newHead.y, COLORS.death, 22);
 
             // Screen shake
@@ -535,9 +588,18 @@
        Input
        -------------------------------------------------------- */
     function handleKey(e) {
+        if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+            e.preventDefault();
+            if (phase === 'playing' || phase === 'paused') {
+                togglePause();
+            }
+            return;
+        }
+
         if (e.key === ' ' || e.code === 'Space') {
             e.preventDefault();
-            if (phase !== 'playing') startGame();
+            if (phase === 'idle' || phase === 'gameover') startGame();
+            else if (phase === 'paused') togglePause();
             return;
         }
 
@@ -630,7 +692,21 @@
 
     function hideOverlay() { $overlay.classList.remove('visible'); }
 
+    function togglePause() {
+        if (phase === 'playing') {
+            phase = 'paused';
+            showOverlay('Paused', 'Press Resume or space to continue', 'Resume');
+        } else if (phase === 'paused') {
+            phase = 'playing';
+            hideOverlay();
+            lastTick = performance.now();
+        }
+    }
+
     function startGame() {
+        // Initialize Audio Context on first user interaction
+        initAudio();
+        
         if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
         phase = 'playing';
         hideOverlay();
@@ -683,7 +759,15 @@
         window.addEventListener('resize', () => { resizeCanvas(); draw(); });
         resetSnake();
         window.addEventListener('keydown', handleKey);
-        $oBtn.addEventListener('click', () => { if (phase !== 'playing') startGame(); });
+        $oBtn.addEventListener('click', () => { 
+            if (phase === 'paused') togglePause();
+            else if (phase !== 'playing') startGame(); 
+        });
+        if ($pauseBtn) {
+            $pauseBtn.addEventListener('click', () => {
+                if (phase === 'playing' || phase === 'paused') togglePause();
+            });
+        }
         initDpad();
 
         if (isTouchDevice) {
