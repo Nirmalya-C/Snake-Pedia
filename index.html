@@ -49,7 +49,8 @@
                     <span class="chip">Swipe / D-pad</span>
                     <span class="chip">Wrap-around board</span>
                     <span class="chip">Self-hit = death</span>
-                    <span class="chip">+0.2× speed per food</span>
+                    <span class="chip">+0.1× speed per food</span>
+                    <span class="chip"><kbd>Space</kbd> / <kbd>P</kbd> Pause</span>
                 </div>
             </div>
 
@@ -61,6 +62,8 @@
 
         <section class="canvas-wrap" aria-label="Snake game board">
             <canvas id="gameCanvas"></canvas>
+
+            <button id="pause-btn" class="btn-pause" aria-label="Pause game" title="Pause (P)" style="display:none">⏸</button>
 
             <div id="overlay" class="overlay visible">
                 <div class="overlay-inner">

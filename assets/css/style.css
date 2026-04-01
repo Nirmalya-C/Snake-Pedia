@@ -539,6 +539,35 @@ canvas {
     80%      { transform: translate(1px, 0); }
 }
 
+/* ============================================================
+   Pause button
+   ============================================================ */
+.btn-pause {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(17, 24, 39, 0.8);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.btn-pause:hover {
+    background: var(--primary-dim);
+    color: var(--primary);
+    border-color: rgba(52, 211, 153, 0.3);
+}
+
 canvas.shake {
     animation: boardShake 0.45s ease-out;
 }

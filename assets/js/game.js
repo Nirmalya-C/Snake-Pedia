@@ -12,7 +12,7 @@
 
     const CELL_COUNT    = 20;           // grid cells per axis
     const BASE_TICK     = 130;          // ms per step at 1.0× speed
-    const SPEED_BUMP    = 0.2;          // speed multiplier increase per food
+    const SPEED_BUMP    = 0.1;          // speed multiplier increase per food
     const MAX_SPEED     = 5.0;          // cap so the game is still playable
     const RESTART_DELAY = 2800;         // ms before auto-restart after death
 
@@ -72,6 +72,7 @@
     const $oBtn       = document.getElementById('overlay-btn');
     const $speedFill  = document.getElementById('speed-fill');
     const $speedValue = document.getElementById('speed-value');
+    const $pauseBtn   = document.getElementById('pause-btn');
 
     /* --------------------------------------------------------
        Persistent high score
@@ -95,6 +96,7 @@
        State
        -------------------------------------------------------- */
     let phase       = 'idle';       // idle | playing | gameover
+    let paused      = false;
     let lastTick    = 0;
     let rafId       = null;
     let foodPulse   = 0;
@@ -102,6 +104,7 @@
     let particles   = [];
     let speedMul    = 1.0;          // current speed multiplier
     let restartTimer = null;
+    let deathFlashAlpha = 0;
 
     const snake = {
         body: [],
@@ -127,6 +130,7 @@
         speedMul    = 1.0;
         particles   = [];
         food        = null;
+        deathFlashAlpha = 0;
         spawnFood();
         syncScore();
         syncSpeed();
@@ -233,6 +237,59 @@
     }
 
     /* --------------------------------------------------------
+       Audio (Web Audio API — no external files required)
+       -------------------------------------------------------- */
+    let audioCtx = null;
+
+    function getAudio() {
+        if (!audioCtx) {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            } catch(e) { return null; }
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return audioCtx;
+    }
+
+    function playEatSound() {
+        const ac = getAudio();
+        if (!ac) return;
+        try {
+            const osc  = ac.createOscillator();
+            const gain = ac.createGain();
+            osc.connect(gain);
+            gain.connect(ac.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(660, ac.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1100, ac.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.25, ac.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
+            osc.start(ac.currentTime);
+            osc.stop(ac.currentTime + 0.18);
+        } catch(e) {}
+    }
+
+    function playDeathSound() {
+        const ac = getAudio();
+        if (!ac) return;
+        try {
+            [440, 330, 220, 110].forEach((freq, i) => {
+                const osc  = ac.createOscillator();
+                const gain = ac.createGain();
+                osc.connect(gain);
+                gain.connect(ac.destination);
+                osc.type = 'sawtooth';
+                const t = ac.currentTime + i * 0.13;
+                osc.frequency.setValueAtTime(freq, t);
+                gain.gain.setValueAtTime(0.2, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+                osc.start(t);
+                osc.stop(t + 0.18);
+            });
+        } catch(e) {}
+    }
+
+    /* --------------------------------------------------------
        Core update
        -------------------------------------------------------- */
     function update() {
@@ -252,6 +309,7 @@
             emitEatSparkle(food.x, food.y);
             spawnFood();
             popScore($pScore);
+            playEatSound();
 
             // Increase speed
             speedMul = Math.min(speedMul + SPEED_BUMP, MAX_SPEED);
@@ -264,6 +322,8 @@
         if (checkSelfCollision()) {
             snake.alive = false;
             emitParticles(newHead.x, newHead.y, COLORS.death, 22);
+            deathFlashAlpha = 0.5;
+            playDeathSound();
 
             // Screen shake
             canvas.classList.remove('shake');
@@ -529,6 +589,13 @@
         drawFood();
         drawSnake();
         drawParticles();
+
+        // Death flash
+        if (deathFlashAlpha > 0) {
+            ctx.fillStyle = `rgba(239, 68, 68, ${deathFlashAlpha})`;
+            ctx.fillRect(0, 0, canvasSize, canvasSize);
+            deathFlashAlpha = Math.max(0, deathFlashAlpha - 0.022);
+        }
     }
 
     /* --------------------------------------------------------
@@ -537,11 +604,24 @@
     function handleKey(e) {
         if (e.key === ' ' || e.code === 'Space') {
             e.preventDefault();
-            if (phase !== 'playing') startGame();
+            if (phase === 'playing') {
+                togglePause();
+            } else {
+                startGame();
+            }
             return;
         }
 
-        if (phase !== 'playing') return;
+        if (e.key === 'p' || e.key === 'P') {
+            if (phase === 'playing') { e.preventDefault(); togglePause(); }
+            return;
+        }
+
+        if (phase !== 'playing' || paused) {
+            // Prevent page scroll from arrow keys even when paused
+            if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+            return;
+        }
 
         const v = snake.vel;
         let n   = null;
@@ -619,6 +699,36 @@
     canvas.addEventListener('touchend', () => { touchStart = null; }, { passive: true });
 
     /* --------------------------------------------------------
+       Pause
+       -------------------------------------------------------- */
+    function togglePause() {
+        if (phase !== 'playing') return;
+        paused = !paused;
+        $pauseBtn.textContent = paused ? '▶' : '⏸';
+        $pauseBtn.setAttribute('aria-label', paused ? 'Resume game' : 'Pause game');
+        $pauseBtn.title = paused ? 'Resume (P)' : 'Pause (P)';
+        if (!paused) lastTick = performance.now();
+    }
+
+    function drawPauseOverlay() {
+        ctx.fillStyle = 'rgba(11, 15, 26, 0.55)';
+        ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+        ctx.fillStyle = '#9ef01a';
+        ctx.font = `bold ${Math.floor(canvasSize / 8)}px 'Space Grotesk', sans-serif`;
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('PAUSED', canvasSize / 2, canvasSize / 2);
+
+        ctx.font = `${Math.floor(canvasSize / 22)}px 'Space Grotesk', sans-serif`;
+        ctx.fillStyle = 'rgba(135, 147, 168, 0.85)';
+        ctx.fillText('Press P or Space to resume', canvasSize / 2, canvasSize / 2 + canvasSize / 7);
+
+        ctx.textAlign    = 'left';
+        ctx.textBaseline = 'alphabetic';
+    }
+
+    /* --------------------------------------------------------
        Game flow
        -------------------------------------------------------- */
     function showOverlay(title, msg, btn) {
@@ -632,9 +742,16 @@
 
     function startGame() {
         if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
+        paused = false;
+        $pauseBtn.textContent = '⏸';
+        $pauseBtn.setAttribute('aria-label', 'Pause game');
+        $pauseBtn.title = 'Pause (P)';
+        $pauseBtn.style.display = 'flex';
         phase = 'playing';
         hideOverlay();
         resetSnake();
+        // Warm up audio context on user gesture
+        getAudio();
         lastTick = performance.now();
         if (rafId) cancelAnimationFrame(rafId);
         loop(performance.now());
@@ -642,6 +759,8 @@
 
     function endGame() {
         phase = 'gameover';
+        paused = false;
+        $pauseBtn.style.display = 'none';
         saveHiScore(snake.score);
 
         const isNewBest = snake.score > 0 && snake.score >= hiScore;
@@ -663,14 +782,15 @@
        -------------------------------------------------------- */
     function loop(now) {
         rafId = requestAnimationFrame(loop);
-        tickParticles();
+        if (!paused) tickParticles();
 
-        if (phase === 'playing' && now - lastTick >= currentTick()) {
+        if (phase === 'playing' && !paused && now - lastTick >= currentTick()) {
             lastTick = now;
             update();
         }
 
         draw();
+        if (paused) drawPauseOverlay();
     }
 
     /* --------------------------------------------------------
@@ -684,6 +804,7 @@
         resetSnake();
         window.addEventListener('keydown', handleKey);
         $oBtn.addEventListener('click', () => { if (phase !== 'playing') startGame(); });
+        $pauseBtn.addEventListener('click', togglePause);
         initDpad();
 
         if (isTouchDevice) {
