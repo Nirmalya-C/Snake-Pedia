@@ -10,10 +10,10 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx    = canvas.getContext('2d');
 
-    const CELL_COUNT    = 25;           // grid cells per axis (bigger playing area)
+    const CELL_COUNT    = 15;           // reduced to 15 to make each cube much bigger
     const BASE_TICK     = 130;          // ms per step at 1.0× speed
     const SPEED_BUMP    = 0.1;          // speed multiplier increase per food
-    const START_SPEED   = 0.2;          // base starting speed
+    const START_SPEED   = 0.5;          // base starting speed
     const MAX_SPEED     = 5.0;          // cap so the game is still playable
     const RESTART_DELAY = 2800;         // ms before auto-restart after death
 
@@ -382,84 +382,61 @@
     }
 
     /* --------------------------------------------------------
-       Drawing — Realistic Apple Food
+       Drawing — Simple Apple Block
        -------------------------------------------------------- */
     function drawFood() {
         if (!food) return;
-
-        const cx    = food.x * GRID + GRID / 2;
-        const cy    = food.y * GRID + GRID / 2;
         
-        // Exact same footprint as the snake head
-        const radius = (GRID - 1) / 2;
-
-        // Glow
-        const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, GRID * 1.6);
+        const pad = 1.5;
+        const cornerR = 8;
+        
+        // Solid pulse glow
+        const cx = food.x * GRID + GRID / 2;
+        const cy = food.y * GRID + GRID / 2;
+        const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, GRID * 1.2);
         g.addColorStop(0, COLORS.foodGlow);
         g.addColorStop(1, 'transparent');
         ctx.fillStyle = g;
-        ctx.fillRect(cx - GRID * 2, cy - GRID * 2, GRID * 4, GRID * 4);
+        ctx.fillRect(cx - GRID, cy - GRID, GRID * 2, GRID * 2);
 
-        // Apple body (circle with slight gradient for 3D effect)
-        const appleGrad = ctx.createRadialGradient(cx - radius * 0.3, cy - radius * 0.3, radius * 0.1, cx, cy, radius);
-        appleGrad.addColorStop(0, '#ff6b6b');
-        appleGrad.addColorStop(0.6, '#ef4444');
-        appleGrad.addColorStop(1, '#b91c1c');
-        ctx.fillStyle = appleGrad;
+        // Simple fully-sized apple block
+        ctx.fillStyle = COLORS.foodBody;
         ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Shine/highlight
-        ctx.fillStyle = COLORS.foodShine;
-        ctx.globalAlpha = 0.5;
-        ctx.beginPath();
-        ctx.ellipse(cx - radius * 0.25, cy - radius * 0.3, radius * 0.4, radius * 0.25, -0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        // Stem
-        ctx.strokeStyle = '#854d0e';
-        ctx.lineWidth   = 2;
-        ctx.lineCap     = 'round';
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - radius + 1);
-        ctx.quadraticCurveTo(cx + 2, cy - radius - 4, cx + 1, cy - radius - 6);
-        ctx.stroke();
-
-        // Leaf
-        ctx.fillStyle = COLORS.foodLeaf;
-        ctx.beginPath();
-        ctx.ellipse(cx + 3, cy - radius - 3, 4, 2.2, 0.5, 0, Math.PI * 2);
+        ctx.roundRect(
+            food.x * GRID + pad, 
+            food.y * GRID + pad, 
+            GRID - pad * 2, 
+            GRID - pad * 2, 
+            cornerR
+        );
         ctx.fill();
     }
 
     /* --------------------------------------------------------
-       Drawing — Snake (gradient body, eyes, tongue)
+       Drawing — Snake (Interactive dynamic colors, eyes, tongue)
        -------------------------------------------------------- */
     function drawSnake() {
         const body = snake.body;
         const len  = body.length;
         if (len === 0) return;
+        
+        // Time-based hue shift for the interactive color path
+        const timeHue = (performance.now() / 20) % 360;
 
-        // Draw body segments from tail to head (so head renders on top)
+        // Draw body segments from tail to head
         for (let i = len - 1; i >= 0; i--) {
             const seg = body[i];
-            const t   = 1 - i / Math.max(len, 1);   // 1 at head, 0 at tail
+            const t   = 1 - i / Math.max(len, 1);
             const isHead = i === 0;
 
-            // Interpolate between body colors
-            const r1 = 6, g1 = 182, b1 = 212;   // cyan
-            const r2 = 52, g2 = 211, b2 = 153;   // emerald
-            const r = Math.round(r1 + (r2 - r1) * t);
-            const g = Math.round(g1 + (g2 - g1) * t);
-            const b = Math.round(b1 + (b2 - b1) * t);
+            // Shift hue backward along the body to create a moving wave
+            const segHue = (timeHue - i * 12 + 360) % 360;
 
-            ctx.globalAlpha = 0.4 + t * 0.6;
-            ctx.fillStyle   = isHead ? COLORS.snakeHead : `rgb(${r},${g},${b})`;
+            ctx.globalAlpha = 0.5 + t * 0.5;
+            ctx.fillStyle   = `hsl(${segHue}, 90%, ${isHead ? 65 : 55}%)`;
 
             const pad = isHead ? 0.5 : 1.5;
-            const cornerR = isHead ? 7 : 4;
+            const cornerR = isHead ? 8 : 5;
             ctx.beginPath();
             ctx.roundRect(
                 seg.x * GRID + pad,
@@ -723,12 +700,7 @@
         const msg   = `Score: ${snake.score}  |  Best: ${hiScore}  |  Speed: ${speedMul.toFixed(1)}×`;
 
         setTimeout(() => {
-            showOverlay(title, msg, 'Play Again');
-
-            // Auto-restart after delay
-            restartTimer = setTimeout(() => {
-                if (phase === 'gameover') startGame();
-            }, RESTART_DELAY);
+            showOverlay(title, msg, 'Restart Game');
         }, 600);
     }
 
